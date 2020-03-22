@@ -2,4 +2,6 @@
 .idea/*
 **/.env.local
 app/front/public/**/*
+/app/back/public/wp-config.php
+/app/back/public/wp-content/uploads/
 !**/.gitkeep
