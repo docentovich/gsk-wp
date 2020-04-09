@@ -8,7 +8,9 @@
  * @subpackage Twenty_Twenty
  * @since 1.0.0
  */
-
+if(!is_user_logged_in()) {
+	auth_redirect();
+}
 ?><!DOCTYPE html>
 
 <html class="no-js" <?php language_attributes(); ?>>
