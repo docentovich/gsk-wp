@@ -49,10 +49,10 @@ if ( ! function_exists ( 'wp_rest_api_frontpage_init' ) ) :
   function wp_rest_api_frontpage_init() {
 
     if ( ! defined( 'JSON_API_VERSION' ) && ! in_array( 'json-rest-api/plugin.php', get_option( 'active_plugins' ) ) ) {
-      $class = new WP_REST_API_frontpage();
+      $class = new WP_REST_API_frontpage(); // V2
       add_filter( 'rest_api_init', array( $class, 'register_routes' ) );
 		} else {
-			$class = new WP_JSON_API_frontpage();
+			$class = new WP_JSON_API_frontpage(); // V1
 			add_filter( 'json_endpoints', array( $class, 'register_routes' ) );
 		}
   }
