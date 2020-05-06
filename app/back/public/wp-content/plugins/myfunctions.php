@@ -7,68 +7,104 @@
  * Author:            Andrey
  *
  */
-if ( ! defined( 'WPINC' ) ) {
-	die;
+if (!defined('WPINC')) {
+    die();
 }
 
-add_action( 'rest_api_init', 'add_custom_fields' );
-function add_custom_fields() {
-	register_rest_field(
-		[ 'post', 'page', 'news' ],
-		'custom_fields', //New Field Name in JSON RESPONSEs
-		array(
-			'get_callback'    => 'get_custom_fields', // custom function name
-			'update_callback' => null,
-			'schema'          => null,
-		)
-	);
+$types = ['posts', 'pages', 'news'];
+
+add_action('rest_api_init', 'add_custom_fields');
+function add_custom_fields()
+{
+    global $types;
+    register_rest_field(
+        $types,
+        'custom_fields', //New Field Name in JSON RESPONSEs
+        [
+            'get_callback' => 'get_custom_fields', // custom function name
+            'update_callback' => null,
+            'schema' => null,
+        ]
+    );
 }
 
-function get_custom_fields( $object, $field_name, $request ) {
-	global $wpdb;
+function get_custom_fields($object, $field_name, $request)
+{
+    global $wpdb;
 
-	$sql = $wpdb->prepare( "SELECT postcount AS total FROM " . $wpdb->prefix . "total
-			WHERE postnum = %s", $object['id'] );
-	$val = $wpdb->get_var( $sql );
+    $sql = $wpdb->prepare(
+        "SELECT postcount AS total FROM " .
+            $wpdb->prefix .
+            "total WHERE postnum = %s",
+        $object['id']
+    );
+    $val = $wpdb->get_var($sql);
 
-	return [ "watch_counter" => $val ?? "0" ];
+    return ["watch_counter" => $val ?? "0"];
 }
 
-add_filter( 'rest_pre_echo_response',
-	/**
-	 * @param $response Object
-	 * @param $object
-	 * @param $request WP_REST_Request
-	 */
-	function ( $response, $object, $request ) {
-		global $wpdb;
+add_action('rest_api_init', function () {
+    global $types;
+    $types_string = implode(',', $types);
+    register_rest_route(
+        '/wp/v2/custom_routes/',
+        "(?P<type>\S+)/(?P<slug>\S+)",
+        [
+            'methods' => 'GET',
+            'callback' => 'custom_api_call',
+        ]
+    );
+});
 
-		$type = array_pop( explode( '/', $request->get_route() ) );
-		$slug = $request->get_param('slug')[0];
+function custom_api_call(WP_REST_Request $request)
+{
+    global $types;
+    $params = $request->get_params();
 
+    if (!in_array($params['type'], $types)) {
+        throw new Exception('incorrect material type');
+    }
 
-		if ( isset($slug) && $type === 'news' && is_array( $response ) && $response[0]['id'] ) {
-			$wpdb->query(
-				$wpdb->prepare(
-					"INSERT INTO " . $wpdb->prefix . "total (postnum, postcount) VALUES ('%s', 1) 
-						ON DUPLICATE KEY UPDATE postcount = postcount + 1",
-					$response[0]['id']
-				)
-			);
-		}
+    $request = new WP_REST_Request('GET', "/wp/v2/{$params['type']}");
+    $request->set_query_params(['slug' => $params['slug']]);
 
-		return $response;
-	}, 10, 3 );
+    // Process the request and get the response
+    $response = rest_do_request($request);
+    $headers = $response->get_headers();
 
+    if ($headers['X-WP-Total'] == 0) {
+        throw new Exception('not found', 404);
+    }
 
-function my_install() {
-	global $wpdb;
+    $material = $response->get_data()[0];
+    incrementView($material['id']);
 
-	$table_name = $wpdb->prefix . 'total';
+    return $material;
+}
 
-	$charset_collate = $wpdb->get_charset_collate();
+function incrementView($id)
+{
+    global $wpdb;
 
-	$sql = "CREATE TABLE $table_name (
+    $wpdb->query(
+        $wpdb->prepare(
+            "INSERT INTO " .
+                $wpdb->prefix .
+                "total (postnum, postcount) VALUES ('%s', 1) 
+					ON DUPLICATE KEY UPDATE postcount = postcount + 1",
+            $id
+        )
+    );
+}
+
+function my_install()
+{
+    global $wpdb;
+
+    $table_name = $wpdb->prefix . 'total';
+    $charset_collate = $wpdb->get_charset_collate();
+
+    $sql = "CREATE TABLE $table_name (
 	  `id` mediumint(9) NOT NULL AUTO_INCREMENT,
 	  `postnum` varchar(255) NOT NULL,
 	  `postcount` int(11) NOT NULL DEFAULT '0',
@@ -77,8 +113,8 @@ function my_install() {
 	) $charset_collate;
 	";
 
-	require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
-	dbDelta( $sql );
+    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+    dbDelta($sql);
 }
 
-register_activation_hook( __FILE__, 'my_install' );
+register_activation_hook(__FILE__, 'my_install');
