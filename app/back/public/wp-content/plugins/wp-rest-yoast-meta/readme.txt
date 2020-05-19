@@ -90,6 +90,11 @@ add_filter( 'wp_rest_yoast_meta/filter_post_types', 'wpym_remove_post_type', 10,
 1. The WP REST API output for the Hello World post example.
 
 == Changelog ==
+= 2020.2.0 =
+Release Date: April 30th, 2020
+
+Bugfix: Added support for Yaost SEO 14.0, which has done an extensive rebuild of code.
+
 = 2020.1.0 =
 Release Date: January 16th, 2020
 

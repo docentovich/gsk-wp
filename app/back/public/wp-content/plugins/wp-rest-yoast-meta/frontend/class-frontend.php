@@ -110,7 +110,7 @@ class Frontend {
 	 */
 	public function rest_add_yoast( $response, $post, $request ) {
 
-		$yoast_data = $this->get_yoast_data( $post );
+		$yoast_data = $this->get_yoast_data( $post, $response );
 
 		/**
 		 * Filter Yoast title.
@@ -206,11 +206,12 @@ class Frontend {
 	/**
 	 * Fetch yoast meta and possibly json ld and store in transient if needed
 	 *
-	 * @param \WP_Post $post Post object.
+	 * @param \WP_Post          $post Post object.
+	 * @param \WP_REST_Response $response The response object.
 	 *
 	 * @return array|mixed
 	 */
-	public function get_yoast_data( $post ) {
+	public function get_yoast_data( $post, $response ) {
 		global $wp_query;
 
 		if ( 'home' === $post ) {
@@ -221,43 +222,52 @@ class Frontend {
 			$yoast_data = $this->get_cache( $post->ID );
 		}
 		if ( false === $yoast_data || ! isset( $yoast_data['meta'] ) || ! isset( $yoast_data['json_ld'] ) || ! isset( $yoast_data['title'] ) ) {
+			if ( version_compare( WPSEO_VERSION, '14.0', '>=' ) ) {
+				if ( isset( $response->data['yoast_head'] ) ) {
+					$html = $response->data['yoast_head'];
 
-			remove_action( 'wpseo_head', array( 'WPSEO_Twitter', 'get_instance' ), 40 );
-
-			// Let Yoast generate the html and fetch it.
-			$frontend = \WPSEO_Frontend::get_instance();
-			ob_start();
-			add_action( 'wpseo_head', [ $this, 'setup_postdata_and_wp_query' ], 1 );
-			add_action( 'wpseo_opengraph', [ $this, 'setup_postdata_and_wp_query' ], 1 );
-
-			// Remove filters to prevent double output.
-			if ( class_exists( 'WPSEO_Schema' ) ) { // WPSEO_Schema is only available since Yoast 11.x.
-				$this->remove_filter( 'wpseo_head', array( new \WPSEO_Schema(), 'json_ld' ), 91 );
-				$this->remove_filter( 'wpseo_json_ld', array( new \WPSEO_Schema(), 'generate' ), 1 );
-				$this->remove_filter( 'amp_post_template_head', array( new \WPSEO_Schema(), 'json_ld' ), 9 );
-				add_action( 'wpseo_head', array( new \WPSEO_Schema(), 'json_ld' ), 91 );
-				add_action( 'wpseo_json_ld', array( new \WPSEO_Schema(), 'generate' ), 1 );
-			}
-
-			$frontend->head();
-			$twitter = new \WPSEO_Twitter();
-			$html    = ob_get_clean();
-
-			// Remove filters to prevent double output these are added again on reinitializing WPSEO_Frontend.
-			foreach ( $this->remove_filters as $filter => $functions ) {
-				foreach ( $functions as $function => $prio ) {
-					remove_filter( $filter, [ $frontend, $function ], $prio );
+					// Parse the xml to create an array of meta items.
+					$yoast_data = $this->parse( $html );
 				}
-			}
-			$frontend->reset();
-
-			// Parse the xml to create an array of meta items.
-			$yoast_data = $this->parse( $html );
-
-			if ( 'home' === $post ) {
-				$yoast_data['title'] = $frontend->title( '' );
 			} else {
-				$yoast_data['title'] = $frontend->title( $post->post_title );
+
+				remove_action( 'wpseo_head', array( 'WPSEO_Twitter', 'get_instance' ), 40 );
+
+				// Let Yoast generate the html and fetch it.
+				$frontend = \WPSEO_Frontend::get_instance();
+				ob_start();
+				add_action( 'wpseo_head', [ $this, 'setup_postdata_and_wp_query' ], 1 );
+				add_action( 'wpseo_opengraph', [ $this, 'setup_postdata_and_wp_query' ], 1 );
+
+				// Remove filters to prevent double output.
+				if ( class_exists( 'WPSEO_Schema' ) ) { // WPSEO_Schema is only available since Yoast 11.x.
+					$this->remove_filter( 'wpseo_head', array( new \WPSEO_Schema(), 'json_ld' ), 91 );
+					$this->remove_filter( 'wpseo_json_ld', array( new \WPSEO_Schema(), 'generate' ), 1 );
+					$this->remove_filter( 'amp_post_template_head', array( new \WPSEO_Schema(), 'json_ld' ), 9 );
+					add_action( 'wpseo_head', array( new \WPSEO_Schema(), 'json_ld' ), 91 );
+					add_action( 'wpseo_json_ld', array( new \WPSEO_Schema(), 'generate' ), 1 );
+				}
+
+				$frontend->head();
+				$twitter = new \WPSEO_Twitter();
+				$html    = ob_get_clean();
+
+				// Remove filters to prevent double output these are added again on reinitializing WPSEO_Frontend.
+				foreach ( $this->remove_filters as $filter => $functions ) {
+					foreach ( $functions as $function => $prio ) {
+						remove_filter( $filter, [ $frontend, $function ], $prio );
+					}
+				}
+				$frontend->reset();
+
+				// Parse the xml to create an array of meta items.
+				$yoast_data = $this->parse( $html );
+
+				if ( 'home' === $post ) {
+					$yoast_data['title'] = $frontend->title( '' );
+				} else {
+					$yoast_data['title'] = $frontend->title( $post->post_title );
+				}
 			}
 
 			if ( is_array( $yoast_data['meta'] ) && count( $yoast_data['meta'] ) ) {
@@ -268,11 +278,13 @@ class Frontend {
 			}
 
 			// Reset postdata & wp_query.
-			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-			$wp_query = $this->old_wp_query;
-			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-			$GLOBALS['wp_the_query'] = $GLOBALS['wp_query'];
-			wp_reset_postdata();
+			if ( ! is_null( $this->old_wp_query ) ) {
+				// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+				$wp_query = $this->old_wp_query;
+				// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+				$GLOBALS['wp_the_query'] = $GLOBALS['wp_query'];
+				wp_reset_postdata();
+			}
 		}
 
 		return $yoast_data;
@@ -355,6 +367,12 @@ class Frontend {
 			}
 		}
 
+		$nodes = $dom->getElementsByTagName( 'title' );
+		$title = null;
+		if ( $nodes->length ) {
+			$title = esc_html( wp_strip_all_tags( stripslashes( $nodes[0]->nodeValue ), true ) );
+		}
+
 		$xpath         = new \DOMXPath( $dom );
 		$yoast_json_ld = [];
 		foreach ( $xpath->query( '//script[@type="application/ld+json"]' ) as $node ) {
@@ -365,6 +383,7 @@ class Frontend {
 
 		return [
 			'meta'    => $yoast_metas,
+			'title'   => $title,
 			'json_ld' => $yoast_json_ld,
 		];
 	}
@@ -379,24 +398,30 @@ class Frontend {
 	 * @return array An array containing all meta key/value pairs.
 	 */
 	private function parse_using_simplexml( $html ) {
-		$xml         = simplexml_load_string( '<yoast>' . $html . '</yoast>' );
-		$yoast_metas = [];
-		foreach ( $xml->meta as $meta ) {
-			$yoast_meta = [];
-			$attributes = $meta->attributes();
-			foreach ( $attributes as $key => $value ) {
-				$yoast_meta[ (string) $key ] = esc_html( wp_strip_all_tags( stripslashes( (string) $value ), true ) );
-			}
-			$yoast_metas[] = $yoast_meta;
-		}
-
+		$yoast_metas   = [];
+		$title         = null;
 		$yoast_json_ld = [];
-		foreach ( $xml->xpath( '//script[@type="application/ld+json"]' ) as $node ) {
-			$yoast_json_ld[] = json_decode( (string) $node, true );
+		$xml           = simplexml_load_string( '<yoast>' . $html . '</yoast>' );
+		if ( $xml ) {
+			foreach ( $xml->meta as $meta ) {
+				$yoast_meta = [];
+				$attributes = $meta->attributes();
+				foreach ( $attributes as $key => $value ) {
+					$yoast_meta[ (string) $key ] = esc_html( wp_strip_all_tags( stripslashes( (string) $value ), true ) );
+				}
+				$yoast_metas[] = $yoast_meta;
+			}
+
+			$title = isset( $xml->title ) ? esc_html( wp_strip_all_tags( stripslashes( (string) $xml->title ), true ) ) : null;
+
+			foreach ( $xml->xpath( '//script[@type="application/ld+json"]' ) as $node ) {
+				$yoast_json_ld[] = json_decode( (string) $node, true );
+			}
 		}
 
 		return [
 			'meta'    => $yoast_metas,
+			'title'   => $title,
 			'json_ld' => $yoast_json_ld,
 		];
 	}
@@ -482,7 +507,7 @@ class Frontend {
 		$yoast_data = [];
 		if ( 'page' === get_option( 'show_on_front' ) ) {
 			$post       = get_post( get_option( 'page_on_front' ) );
-			$yoast_data = $this->get_yoast_data( $post );
+			$yoast_data = $this->get_yoast_data( $post, new \WP_REST_Response() );
 		} else {
 			global $wp_query;
 
@@ -493,7 +518,7 @@ class Frontend {
 			$wp_query->get_posts();
 
 			add_action( 'wpseo_head', [ $this, 'override_query_reset' ], 1 );
-			$yoast_data = $this->get_yoast_data( 'home' );
+			$yoast_data = $this->get_yoast_data( 'home', new \WP_REST_Response() );
 			remove_action( 'wpseo_head', [ $this, 'override_query_reset' ], 1 );
 		}
 
