@@ -12,6 +12,7 @@ if (!defined('WPINC')) {
 }
 
 $types = ['posts', 'pages', 'news'];
+$types_to_routes = ['post' => 'posts', 'page' => 'pages', 'news' => 'news'];
 
 add_action('rest_api_init', 'add_custom_fields');
 function add_custom_fields()
@@ -48,7 +49,7 @@ add_action('rest_api_init', function () {
     $types_string = implode(',', $types);
     register_rest_route(
         '/wp/v2/custom_routes/',
-        "(?P<type>\S+)/(?P<slug>\S+)",
+        "(?P<slug>\S+)",
         [
             'methods' => 'GET',
             'callback' => 'custom_api_call',
@@ -61,11 +62,9 @@ function custom_api_call(WP_REST_Request $request)
     global $types;
     $params = $request->get_params();
 
-    if (!in_array($params['type'], $types)) {
-        throw new Exception('incorrect material type');
-    }
+    $material_type = slugToRoute($params['slug']);
 
-    $request = new WP_REST_Request('GET', "/wp/v2/{$params['type']}");
+    $request = new WP_REST_Request('GET', "/wp/v2/{$material_type}");
     $request->set_query_params(['slug' => $params['slug']]);
 
     // Process the request and get the response
@@ -80,6 +79,19 @@ function custom_api_call(WP_REST_Request $request)
     incrementView($material['id']);
 
     return $material;
+}
+
+function slugToRoute($slug) {
+    global $types_to_routes;
+
+    $query = new WP_Query( ['post_type' => 'any', 'name' => $slug ] );
+    $material = $query->get_posts();
+
+    if (count($material) === 0) {
+        throw new Exception('not found', 404);
+    }
+
+    return $types_to_routes[$material[0]->post_type];
 }
 
 function incrementView($id)
