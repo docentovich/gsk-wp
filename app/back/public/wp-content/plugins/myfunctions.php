@@ -45,16 +45,10 @@ function get_custom_fields($object, $field_name, $request)
 }
 
 add_action('rest_api_init', function () {
-    global $types;
-    $types_string = implode(',', $types);
-    register_rest_route(
-        '/wp/v2/custom_routes/',
-        "(?P<slug>\S+)",
-        [
-            'methods' => 'GET',
-            'callback' => 'custom_api_call',
-        ]
-    );
+    register_rest_route('/wp/v2/custom_routes/slug/', "(?P<slug>\S+)", [
+        'methods' => 'GET',
+        'callback' => 'custom_api_call',
+    ]);
 });
 
 function custom_api_call(WP_REST_Request $request)
@@ -81,10 +75,11 @@ function custom_api_call(WP_REST_Request $request)
     return $material;
 }
 
-function slugToRoute($slug) {
+function slugToRoute($slug)
+{
     global $types_to_routes;
 
-    $query = new WP_Query( ['post_type' => 'any', 'name' => $slug ] );
+    $query = new WP_Query(['post_type' => 'any', 'name' => $slug]);
     $material = $query->get_posts();
 
     if (count($material) === 0) {
@@ -107,6 +102,26 @@ function incrementView($id)
             $id
         )
     );
+}
+
+add_action('rest_api_init', function () {
+    register_rest_route('/wp/v2/custom_routes/', "sitemap", [
+        'methods' => 'GET',
+        'callback' => 'sitemap_call',
+    ]);
+});
+
+function sitemap_call()
+{
+    global $wpdb;
+
+    $sql = $wpdb->prepare(
+        "SELECT p.post_title, p.post_type as type, p.post_name as slug  FROM " .
+            $wpdb->prefix .
+            "posts as p WHERE post_type in ('post', 'news', 'page')"
+    );
+    $val = $wpdb->get_results($sql);
+    return $val;
 }
 
 function my_install()
