@@ -14,6 +14,7 @@ if (!defined('WPINC')) {
 $types = ['posts', 'pages', 'news'];
 $types_to_routes = ['post' => 'posts', 'page' => 'pages', 'news' => 'news'];
 
+// add_custom_fields
 add_action('rest_api_init', 'add_custom_fields');
 function add_custom_fields()
 {
@@ -28,7 +29,6 @@ function add_custom_fields()
         ]
     );
 }
-
 function get_custom_fields($object, $field_name, $request)
 {
     global $wpdb;
@@ -44,13 +44,13 @@ function get_custom_fields($object, $field_name, $request)
     return ["watch_counter" => $val ?? "0"];
 }
 
+// custom_api_call
 add_action('rest_api_init', function () {
     register_rest_route('/wp/v2/custom_routes/slug/', "(?P<slug>\S+)", [
         'methods' => 'GET',
         'callback' => 'custom_api_call',
     ]);
 });
-
 function custom_api_call(WP_REST_Request $request)
 {
     global $types;
@@ -104,13 +104,13 @@ function incrementView($id)
     );
 }
 
+// sitemap
 add_action('rest_api_init', function () {
     register_rest_route('/wp/v2/custom_routes/', "sitemap", [
         'methods' => 'GET',
         'callback' => 'sitemap_call',
     ]);
 });
-
 function sitemap_call()
 {
     global $wpdb;
@@ -124,6 +124,64 @@ function sitemap_call()
     return $val;
 }
 
+// search
+add_action('rest_api_init', function () {
+    register_rest_route('/wp/v2/custom_routes/', "search", [
+        'methods' => 'GET',
+        'callback' => 'search',
+    ]);
+});
+function search(WP_REST_Request $request)
+{
+    global $wpdb;
+    $params = $request->get_query_params();
+
+    $key_word = '%' . $params['key_word'] . '%';
+    $page = ($params['page'] ?? 1) - 1;
+    $limit = $params['limit'] ?? 2;
+    $offset = $page * $limit;
+
+    if (empty($key_word)) {
+        return [];
+    }
+
+    $where = "WHERE post_type in ('post', 'news', 'page') and (
+                 p.post_title LIKE '%s' OR p.post_content LIKE '%s' OR p.post_name LIKE '%s'
+             )";
+
+    $count_sql = $wpdb->prepare(
+        "SELECT COUNT(*) FROM " . $wpdb->prefix . "posts as p ${where}",
+        $key_word,
+        $key_word,
+        $key_word
+    );
+    $total = (int) $wpdb->get_var($count_sql);
+
+    $sql = $wpdb->prepare(
+        "SELECT p.post_title, p.post_type as type, p.post_name as slug, p.post_content as post_content FROM " .
+            $wpdb->prefix .
+            "posts as p ${where} LIMIT %d, %d",
+        $key_word,
+        $key_word,
+        $key_word,
+        $offset,
+        $limit
+    );
+
+    return [
+        'values' => array_map(function ($post) {
+            $post_content = strip_tags($post->post_content);
+            $post_content = substr($post_content, 0, 340);
+            $post_content =
+                substr($post_content, 0, strrpos($post_content, ' ')) . " ...";
+            $post->post_content = $post_content;
+            return $post;
+        }, $wpdb->get_results($sql)),
+    ];
+}
+
+// Install
+register_activation_hook(__FILE__, 'my_install');
 function my_install()
 {
     global $wpdb;
@@ -143,5 +201,3 @@ function my_install()
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
     dbDelta($sql);
 }
-
-register_activation_hook(__FILE__, 'my_install');
