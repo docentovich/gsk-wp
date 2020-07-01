@@ -177,6 +177,7 @@ function search(WP_REST_Request $request)
             $post->post_content = $post_content;
             return $post;
         }, $wpdb->get_results($sql)),
+	    'total' => $total
     ];
 }
 
