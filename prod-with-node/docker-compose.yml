@@ -40,10 +40,10 @@ services:
       environment:
         - NODE_ENV=production
       volumes:
-        - ./app/front/public/__sapper__/build:/var/www/front/__sapper__/build
-        - ./app/front/public/static:/var/www/front/static
-        - ./app/front/public/node_modules:/var/www/node_modules
-        - ./app/front/public/package.json:/var/www/package.json
+        - ../app/front/public/__sapper__/build:/var/www/front/__sapper__/build
+        - ../app/front/public/static:/var/www/front/static
+        - ../app/front/public/node_modules:/var/www/node_modules
+        - ../app/front/public/package.json:/var/www/package.json
       ports:
         - "80:3000"
       command: "node /var/www/front/__sapper__/build"
