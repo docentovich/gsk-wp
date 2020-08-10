@@ -50,8 +50,6 @@ services:
         ports:
           - "80:3000"
         command: "node /var/www/front/__sapper__/build"
-        env_file:
-          - C:/Users/USER/prj/gsk-front/.env
         links:
           - web
   db:
