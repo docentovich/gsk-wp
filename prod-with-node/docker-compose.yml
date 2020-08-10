@@ -38,7 +38,7 @@ services:
       user: "www-data"
       working_dir: /var/www/front
       environment:
-        - NODE ENV=production
+        - NODE_ENV=production
       volumes:
         - ./app/front/public/__sapper__/build:/var/www/front/__sapper__/build
         - ./app/front/public/static:/var/www/front/static
