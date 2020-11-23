@@ -57,7 +57,7 @@ class Plugin {
 	 * @since    2018.1.0
 	 */
 	public function __construct() {
-		$this->version     = '2020.2.0';
+		$this->version     = '2020.2.2';
 		$this->plugin_name = 'wp-rest-yoast-meta';
 
 		$this->set_locale();

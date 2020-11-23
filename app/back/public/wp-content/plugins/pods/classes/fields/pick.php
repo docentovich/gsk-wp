@@ -99,15 +99,22 @@ class PodsField_Pick extends PodsField {
 		add_action( 'wp_ajax_nopriv_pods_relationship', array( $this, 'admin_ajax_relationship' ) );
 
 		// Handle modal input.
+		add_action( 'pods_meta_box_pre', array( $this, 'admin_modal_input' ) );
 		add_action( 'edit_form_top', array( $this, 'admin_modal_input' ) );
 		add_action( 'show_user_profile', array( $this, 'admin_modal_input' ) );
 		add_action( 'edit_user_profile', array( $this, 'admin_modal_input' ) );
-		add_action( 'edit_category_form', array( $this, 'admin_modal_input' ) );
-		add_action( 'edit_link_category_form', array( $this, 'admin_modal_input' ) );
-		add_action( 'edit_tag_form', array( $this, 'admin_modal_input' ) );
-		// @todo add_tag_form is deprecated, replace our hook usage.
-		add_action( 'add_tag_form', array( $this, 'admin_modal_input' ) );
-		add_action( 'pods_meta_box_pre', array( $this, 'admin_modal_input' ) );
+
+		// Hook into every taxonomy form.
+		$taxonomies = get_taxonomies();
+
+		foreach ( $taxonomies as $taxonomy ) {
+			if ( $taxonomy instanceof WP_Term ) {
+				$taxonomy = $taxonomy->name;
+			}
+
+			add_action( $taxonomy . '_add_form', array( $this, 'admin_modal_input' ) );
+			add_action( $taxonomy . '_edit_form', array( $this, 'admin_modal_input' ) );
+		}
 
 		// Handle modal saving.
 		add_filter( 'redirect_post_location', array( $this, 'admin_modal_bail_post_redirect' ), 10, 2 );
@@ -933,7 +940,7 @@ class PodsField_Pick extends PodsField {
 		if ( is_user_logged_in() ) {
 			$uid = 'user_' . get_current_user_id();
 		} else {
-			$uid = @session_id();
+			$uid = pods_session_id();
 		}
 
 		$uri_hash = wp_create_nonce( 'pods_uri_' . $_SERVER['REQUEST_URI'] );
@@ -1333,10 +1340,13 @@ class PodsField_Pick extends PodsField {
 		// Parse icon type
 		if ( 'none' === $icon || 'div' === $icon ) {
 			$icon         = '';
-		} elseif ( 0 === strpos( $icon, 'data:image/svg+xml;base64,' ) ) {
-			$icon         = esc_attr( $icon );
 		} elseif ( 0 === strpos( $icon, 'dashicons-' ) ) {
 			$icon         = sanitize_html_class( $icon );
+		}
+
+		// #5740 Check for WP_Error object.
+		if ( ! is_string( $link ) ) {
+			$link = '';
 		}
 
 		// Support modal editing
@@ -1383,12 +1393,12 @@ class PodsField_Pick extends PodsField {
 		}
 
 		$item = array(
-			'id'           => $item_id,
-			'icon'         => $icon,
-			'name'         => $item_title,
-			'edit_link'    => $edit_link,
-			'link'         => $link,
-			'selected'     => $selected,
+			'id'        => esc_html( $item_id ),
+			'icon'      => esc_attr( $icon ),
+			'name'      => wp_strip_all_tags( html_entity_decode( $item_title ) ),
+			'edit_link' => html_entity_decode( esc_url( $edit_link ) ),
+			'link'      => html_entity_decode( esc_url( $link ) ),
+			'selected'  => $selected,
 		);
 
 		return $item;
@@ -1981,6 +1991,27 @@ class PodsField_Pick extends PodsField {
 			), $object_params
 		);
 
+		/**
+		 * Overwrite parameters used by PodsField_Pick::get_object_data.
+		 *
+		 * @since 2.7.21
+		 *
+		 * @param array  $object_params       {
+		 *     Get object parameters
+		 *
+		 *     @type string     $name        Field name.
+		 *     @type mixed      $value       Current value.
+		 *     @type array      $options     Field options.
+		 *     @type array      $pod         Pod data.
+		 *     @type int|string $id          Current item ID.
+		 *     @type string     $context     Data context.
+		 *     @type array      $data_params Data parameters.
+		 *     @type int        $page        Page number of results to get.
+		 *     @type int        $limit       How many data items to limit to (autocomplete defaults to 30, set to -1 or 1+ to override).
+		 * }
+		 */
+		$object_params = apply_filters( 'pods_field_pick_object_data_params', $object_params );
+
 		$object_params['options']     = (array) $object_params['options'];
 		$object_params['data_params'] = (array) $object_params['data_params'];
 
@@ -2100,6 +2131,8 @@ class PodsField_Pick extends PodsField {
 				$search_data = pods_data();
 				$search_data->table( $options['table_info'] );
 
+				$default_field_index = $search_data->field_index;
+
 				if ( isset( $options['table_info']['pod'] ) && ! empty( $options['table_info']['pod'] ) && isset( $options['table_info']['pod']['name'] ) ) {
 					$search_data->pod    = $options['table_info']['pod']['name'];
 					$search_data->fields = $options['table_info']['pod']['fields'];
@@ -2140,7 +2173,7 @@ class PodsField_Pick extends PodsField {
 						if ( isset( $options['table_info']['pod']['object_fields'] ) && isset( $options['table_info']['pod']['object_fields'][ $display ] ) ) {
 							$search_data->field_index = $display;
 
-							$params['select'] = "`t`.`{$search_data->field_id}`, `t`.`{$search_data->field_index}`";
+							$params['select'] .= ", `t`.`{$search_data->field_index}`";
 						} else {
 							$search_data->field_index = sanitize_key( $display );
 
@@ -2151,17 +2184,17 @@ class PodsField_Pick extends PodsField {
 								), true
 							)
 							) {
-								$params['select'] = "`t`.`{$search_data->field_id}`, `d`.`{$search_data->field_index}`";
+								$params['select'] .= ", `d`.`{$search_data->field_index}`";
 							} elseif ( 'meta' === $options['table_info']['pod']['storage'] ) {
-								$params['select'] = "`t`.`{$search_data->field_id}`, `{$search_data->field_index}`.`meta_value` AS {$search_data->field_index}";
+								$params['select'] .= ", `{$search_data->field_index}`.`meta_value` AS {$search_data->field_index}";
 							} else {
-								$params['select'] = "`t`.`{$search_data->field_id}`, `t`.`{$search_data->field_index}`";
+								$params['select'] .= ", `t`.`{$search_data->field_index}`";
 							}
 						}//end if
 					} elseif ( isset( $options['table_info']['object_fields'] ) && isset( $options['table_info']['object_fields'][ $display ] ) ) {
 						$search_data->field_index = $display;
 
-						$params['select'] = "`t`.`{$search_data->field_id}`, `t`.`{$search_data->field_index}`";
+						$params['select'] .= ", `t`.`{$search_data->field_index}`";
 					}//end if
 				}//end if
 
@@ -2303,6 +2336,10 @@ class PodsField_Pick extends PodsField {
 							$ids = wp_list_pluck( $ids, $search_data->field_id );
 						}
 
+						if ( $params['limit'] < count( $ids ) ) {
+							$params['limit'] = count( $ids );
+						}
+
 						if ( is_array( $ids ) ) {
 							$ids = implode( ', ', $ids );
 						}
@@ -2311,7 +2348,7 @@ class PodsField_Pick extends PodsField {
 							$params['where'] = implode( ' AND ', $params['where'] );
 						}
 						if ( ! empty( $params['where'] ) ) {
-							$params['where'] .= ' AND ';
+							$params['where'] = '(' . $params['where'] . ') AND ';
 						}
 
 						$params['where'] .= "`t`.`{$search_data->field_id}` IN ( {$ids} )";
@@ -2346,13 +2383,18 @@ class PodsField_Pick extends PodsField {
 					$display_filter = pods_v( 'display_filter', pods_v( 'options', pods_v( $search_data->field_index, $search_data->pod_data['object_fields'] ) ) );
 
 					foreach ( $results as $result ) {
-						$result = get_object_vars( $result );
+						$result      = get_object_vars( $result );
+						$field_id    = $search_data->field_id;
+						$field_index = $search_data->field_index;
 
-						if ( ! isset( $result[ $search_data->field_id ], $result[ $search_data->field_index ] ) ) {
+						if ( ! isset( $result[ $field_index ] ) ) {
+							$field_index = $default_field_index;
+						}
+						if ( ! isset( $result[ $field_id ], $result[ $field_index ] ) ) {
 							continue;
 						}
 
-						$result[ $search_data->field_index ] = trim( $result[ $search_data->field_index ] );
+						$result[ $field_index ] = trim( $result[ $field_index ] );
 
 						$object      = '';
 						$object_type = '';
@@ -2366,11 +2408,11 @@ class PodsField_Pick extends PodsField {
 						}
 
 						if ( 0 < strlen( $display_filter ) ) {
-							$display_filter_args = pods_v( 'display_filter_args', pods_v( 'options', pods_v( $search_data->field_index, $search_data->pod_data['object_fields'] ) ) );
+							$display_filter_args = pods_v( 'display_filter_args', pods_v( 'options', pods_v( $field_index, $search_data->pod_data['object_fields'] ) ) );
 
 							$filter_args = array(
 								$display_filter,
-								$result[ $search_data->field_index ],
+								$result[ $field_index ],
 							);
 
 							if ( ! empty( $display_filter_args ) ) {
@@ -2381,22 +2423,22 @@ class PodsField_Pick extends PodsField {
 								}
 							}
 
-							$result[ $search_data->field_index ] = call_user_func_array( 'apply_filters', $filter_args );
+							$result[ $field_index ] = call_user_func_array( 'apply_filters', $filter_args );
 						}
 
 						if ( in_array( $options[ static::$type . '_object' ], array( 'site', 'network' ), true ) ) {
-							$result[ $search_data->field_index ] = $result[ $search_data->field_index ] . $result['path'];
-						} elseif ( '' === $result[ $search_data->field_index ] ) {
-							$result[ $search_data->field_index ] = '(No Title)';
+							$result[ $field_index ] = $result[ $field_index ] . $result['path'];
+						} elseif ( '' === $result[ $field_index ] ) {
+							$result[ $field_index ] = '(No Title)';
 						}
 
 						if ( 'admin_ajax_relationship' === $context ) {
-							$items[] = $this->build_dfv_field_item_data_recurse_item( $result[ $search_data->field_id ], $result[ $search_data->field_index ], (object) $object_params );
+							$items[] = $this->build_dfv_field_item_data_recurse_item( $result[ $field_id ], $result[ $field_index ], (object) $object_params );
 						} else {
-							$data[ $result[ $search_data->field_id ] ] = $result[ $search_data->field_index ];
+							$data[ $result[ $field_id ] ] = $result[ $field_index ];
 						}
 
-						$ids[] = $result[ $search_data->field_id ];
+						$ids[] = $result[ $field_id ];
 					}//end foreach
 				}//end if
 			}//end if
@@ -2511,7 +2553,7 @@ class PodsField_Pick extends PodsField {
 
 		$params = (object) $params;
 
-		$uid = @session_id();
+		$uid = pods_session_id();
 
 		if ( is_user_logged_in() ) {
 			$uid = 'user_' . get_current_user_id();

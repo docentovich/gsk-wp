@@ -461,8 +461,9 @@ class Frontend {
 			'wp-rest-yoast-meta/v1',
 			'redirects',
 			array(
-				'methods'  => 'GET',
-				'callback' => [ $this, 'return_redirects' ],
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'return_redirects' ],
+				'permission_callback' => '__return_true',
 			)
 		);
 	}
@@ -478,10 +479,28 @@ class Frontend {
 
 		$data = [];
 		foreach ( $redirects as $redirect ) {
-			$data[] = sprintf( '/%s/ /%s/ %d', $redirect->get_origin(), $redirect->get_target(), $redirect->get_type() );
+			$origin = $this->leadingslashit( trailingslashit( $redirect->get_origin() ) );
+			$target = $this->leadingslashit( trailingslashit( $redirect->get_target() ) );
+			$type   = $redirect->get_type();
+			$data[] = sprintf( '%s %s %d', $origin, $target, $type );
 		}
 
 		return $data;
+	}
+
+	/**
+	 * Appends a leading slash.
+	 *
+	 * Will remove leading forward and backslashes if it exists already before adding
+	 * a leading forward slash. This prevents double slashing a string or path.
+	 *
+	 * This function is inspired by the WordPress function `trailingslashit`.
+	 *
+	 * @param string $string What to add the leading slash to.
+	 * @return string String with leading slash added.
+	 */
+	private function leadingslashit( $string ) {
+		return '/' . ltrim( $string, '/\\' );
 	}
 
 	/**
@@ -492,8 +511,9 @@ class Frontend {
 			'wp-rest-yoast-meta/v1',
 			'home',
 			array(
-				'methods'  => 'GET',
-				'callback' => [ $this, 'get_home_yoast_meta' ],
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'get_home_yoast_meta' ],
+				'permission_callback' => '__return_true',
 			)
 		);
 	}

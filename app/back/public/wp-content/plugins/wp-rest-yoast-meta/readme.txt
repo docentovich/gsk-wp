@@ -2,9 +2,9 @@
 Contributors: rockfire, acato
 Tags: yoast, wp-rest, wp-rest-api, api, rest, seo, meta tags, meta, json-ld
 Requires at least: 4.7
-Tested up to: 5.3
+Tested up to: 5.5
 Requires PHP: 5.4
-Stable tag: trunk
+Stable tag: 2020.2.2
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl.html
 
@@ -90,6 +90,17 @@ add_filter( 'wp_rest_yoast_meta/filter_post_types', 'wpym_remove_post_type', 10,
 1. The WP REST API output for the Hello World post example.
 
 == Changelog ==
+
+= 2020.2.2 =
+Release Date: September 7th, 2020
+
+Bugfix: permission_callback notice as of WordPress 5.5.
+
+= 2020.2.1 =
+Release Date: June 8th, 2020
+
+Bugfix: Minor fix to the redirects endpoint.
+
 = 2020.2.0 =
 Release Date: April 30th, 2020
 
