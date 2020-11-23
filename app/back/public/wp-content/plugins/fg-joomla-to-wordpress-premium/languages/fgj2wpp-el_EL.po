@@ -1,0 +1,113 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: FG Joomla to WordPress Premium\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2018-04-20 11:23+0000\n"
+"PO-Revision-Date: 2018-04-20 11:29+0000\n"
+"Last-Translator: gas <gas@otenet.gr>\n"
+"Language-Team: Ελληνικά\n"
+"Language: el\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Loco https://localise.biz/"
+
+#: admin/class-fg-joomla-to-wordpress-premium-admin.php:190
+msgid ""
+"You need to fully empty the database if you want to use the \"Keep Joomla "
+"ID\" feature."
+msgstr ""
+"Χρειάζεται να αδειάσετε τελείως τη βάση δεδομένων αν θέλετε να "
+"χρησιμοποιήσετε το \"Διατήρηση του Joomla ID\" χαρακτηριστικού"
+
+#: admin/partials/premium-features.php:2
+msgid "Menus:"
+msgstr "Μενού:"
+
+#: admin/partials/premium-features.php:4
+msgid "Create submenus with subcategories for categories menus"
+msgstr "Δημιουργία υπομενού με υποκατηγορίες για τις κατηγορίες μενού"
+
+#: admin/partials/premium-features.php:9
+msgid "SEO:"
+msgstr "SEO:"
+
+#: admin/partials/premium-features.php:11
+msgid ""
+"Import the meta description and the meta keywords to WordPress SEO by Yoast"
+msgstr ""
+"Εισαγωγή της μετα-περιγραφής και των μετα-λέξεων κλειδιών στο WordPress SEO "
+"της Yoast"
+
+#: admin/partials/premium-features.php:13
+msgid "Set the meta data from menus instead of articles"
+msgstr "Ορίστε τα μεταδεδομένα από τα μενού αντί των άρθρων"
+
+#: admin/partials/premium-features.php:15
+msgid "Set the post slugs from menus instead of aliases"
+msgstr "Ορίστε τα slug των άρθρων από τα μενού αντί των ψευδώνυμων"
+
+#: admin/partials/premium-features.php:17
+msgid "Keep the Joomla articles IDs"
+msgstr "Διατήρηση των Joomla ID των άρθρων"
+
+#: admin/partials/premium-features.php:19
+msgid "Redirect the Joomla URLs"
+msgstr "Αναδρομολόγηση των Joomla URL"
+
+#: admin/partials/premium-features.php:24
+msgid "Partial import:"
+msgstr "Μερική εισαγωγή:"
+
+#: admin/partials/premium-features.php:26
+msgid "expand / collapse"
+msgstr "επέκταση / κλείσιμο"
+
+#: admin/partials/premium-features.php:28
+msgid "Don't import the categories"
+msgstr "Να μην εισαχθούν κατηγορίες"
+
+#: admin/partials/premium-features.php:30
+msgid "Don't import the articles"
+msgstr "Να μην εισαχθούν άρθρα"
+
+#: admin/partials/premium-features.php:32
+msgid "Don't import the web links"
+msgstr "Να μην εισαχθούν σύνδεσμοι"
+
+#: admin/partials/premium-features.php:34
+msgid "Don't import the users"
+msgstr "Να μην εισαχθούν χρήστες"
+
+#: admin/partials/premium-features.php:36
+msgid "Don't import the menus"
+msgstr "Να μην εισαχθούν μενού"
+
+#: admin/partials/premium-features.php:38
+msgid "Don't import the modules"
+msgstr "Να μην εισαχθούν μοντούλες"
+
+#. Name of the plugin
+msgid "FG Joomla to WordPress Premium"
+msgstr "FG Joomla to WordPress Premium"
+
+#. Description of the plugin
+msgid ""
+"A plugin to migrate categories, posts, tags, images, medias, menus and users "
+"from Joomla to WordPress"
+msgstr ""
+"Ένα πρόσθετο για να μεταφέρετε κατηγορίες, άρθρα, ετικέτες, εικόνες, "
+"πολυμέσα, μενού και χρήστες από το Joomla στο WordPress"
+
+#. URI of the plugin
+msgid "https://www.fredericgilles.net/fg-joomla-to-wordpress/"
+msgstr "https://www.fredericgilles.net/fg-joomla-to-wordpress/"
+
+#. Author of the plugin
+msgid "Frédéric GILLES"
+msgstr "Frédéric GILLES"
+
+#. Author URI of the plugin
+msgid "https://www.fredericgilles.net/"
+msgstr "https://www.fredericgilles.net/"
