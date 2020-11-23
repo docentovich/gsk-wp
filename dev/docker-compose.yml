@@ -21,6 +21,7 @@ services:
       container_name: phpmyadmin
       environment:
        - PMA_ARBITRARY=1
+       - UPLOAD_LIMIT=99999999999999
       restart: always
       ports:
        - "8090:80"
