@@ -11,7 +11,8 @@
 //if(!is_user_logged_in()) {
 //	auth_redirect();
 //}
-wp_redirect( FRONT_URL . $_SERVER['REQUEST_URI']);
+
+wp_redirect( FRONT_URL . trim($_SERVER['REQUEST_URI'], '/'));
 ?><!DOCTYPE html>
 
 <html class="no-js" <?php language_attributes(); ?>>
