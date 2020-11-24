@@ -11,8 +11,8 @@ if (!defined('WPINC')) {
     die();
 }
 
-$types = ['posts', 'pages', 'news'];
-$types_to_routes = ['post' => 'posts', 'page' => 'pages', 'news' => 'news'];
+$types = ['posts', 'pages'];
+$types_to_routes = ['post' => 'posts', 'page' => 'pages'];
 
 // add_custom_fields
 add_action('rest_api_init', 'add_custom_fields');
@@ -118,7 +118,7 @@ function sitemap_call()
     $sql = $wpdb->prepare(
         "SELECT p.post_title, p.post_type as type, p.post_name as slug  FROM " .
             $wpdb->prefix .
-            "posts as p WHERE post_type in ('post', 'news', 'page')"
+            "posts as p WHERE post_type in ('post', 'page')"
     );
     $val = $wpdb->get_results($sql);
     return $val;
@@ -145,9 +145,9 @@ function search(WP_REST_Request $request)
         return [];
     }
 
-    $where = "WHERE post_type in ('post', 'news', 'page') and (
+    $where = "WHERE post_type in ('post', 'page') and (
                  p.post_title LIKE '%s' OR p.post_content LIKE '%s' OR p.post_name LIKE '%s'
-             )";
+             ) and post_status = 'publish'";
 
     $count_sql = $wpdb->prepare(
         "SELECT COUNT(*) FROM " . $wpdb->prefix . "posts as p ${where}",
@@ -175,6 +175,51 @@ function search(WP_REST_Request $request)
             $post_content =
                 substr($post_content, 0, strrpos($post_content, ' ')) . " ...";
             $post->post_content = $post_content;
+            return $post;
+        }, $wpdb->get_results($sql)),
+	    'total' => $total
+    ];
+}
+
+// all-posts
+add_action('rest_api_init', function () {
+    register_rest_route('/wp/v2/custom_routes/', "all_posts", [
+        'methods' => 'GET',
+        'callback' => 'all_posts',
+    ]);
+});
+function all_posts(WP_REST_Request $request)
+{
+    global $wpdb;
+    $params = $request->get_query_params();
+
+    $page = ($params['page'] ?? 1) - 1;
+    $limit = $params['limit'] ?? 2;
+    $offset = $page * $limit;
+
+    $where = "WHERE post_type = 'post' and post_status = 'publish' ";
+
+    $count_sql = $wpdb->prepare(
+        "SELECT COUNT(*) FROM " . $wpdb->prefix . "posts as p ${where}"
+    );
+    $total = (int) $wpdb->get_var($count_sql);
+
+    $sql = $wpdb->prepare(
+        "SELECT p.post_title, p.ID as id,  p.post_date as date, p.post_type as type, p.post_name as slug, p.post_content as post_content FROM " .
+            $wpdb->prefix .
+            "posts as p ${where} ORDER BY post_date DESC  LIMIT %d, %d",
+        $offset,
+        $limit
+    );
+
+    return [
+        'values' => array_map(function ($post) {
+            $post_content = strip_tags($post->post_content);
+            $post_content = substr($post_content, 0, 340);
+            $post_content =
+                substr($post_content, 0, strrpos($post_content, ' ')) . " ...";
+            $post->post_content = $post_content;
+            $post->thumbnail = get_the_post_thumbnail_url( $post->id, 'thumbnail' );;
             return $post;
         }, $wpdb->get_results($sql)),
 	    'total' => $total
