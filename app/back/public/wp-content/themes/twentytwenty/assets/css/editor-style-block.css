@@ -250,7 +250,6 @@ Inter variable font. Usage:
 	font-feature-settings: "lnum";
 	font-variant-numeric: lining-nums;
 	font-weight: 700;
-	letter-spacing: -0.0415625em;
 	line-height: 1.25;
 	margin: 40px 0 25px;
 }
@@ -1389,7 +1388,7 @@ hr.wp-block-separator.is-style-dots::before {
 
 	.editor-post-title__block .editor-post-title__input,
 	.editor-styles-wrapper .wp-block h1 {
-		font-size: 84px;
+		font-size: 34px;
 	}
 
 	.editor-styles-wrapper .wp-block h6 {
