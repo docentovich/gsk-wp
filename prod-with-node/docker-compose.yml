@@ -5,6 +5,7 @@ services:
       build:
         context: ../docker_files
         dockerfile: php
+      restart: unless-stopped
       environment:
         PHP_XDEBUG_ENABLED: 0 # Set 1 to enable.
       links:
@@ -26,6 +27,7 @@ services:
        - ../sessions
   web:
       image: nginx:1.11-alpine
+      restart: unless-stopped
       links:
         - php
       ports:
@@ -38,25 +40,22 @@ services:
       image: "node:latest"
       user: "www-data"
       working_dir: /var/www/front
+      restart: unless-stopped
       environment:
         - NODE_ENV=production
       volumes:
-        - ../app/front/public/__sapper__/build:/var/www/front/__sapper__/build
-        - ../app/front/public/static:/var/www/front/static
-        - ../app/front/public/node_modules:/var/www/node_modules
-        - ../app/front/public/package.json:/var/www/package.json
-        - /etc/ssl/certificate.crt:/etc/ssl/certificate.crt
-        - /etc/ssl/private.key:/etc/ssl/private.key
-        - /etc/ssl/ca_bundle.crt:/etc/ssl/ca_bundle.crt
-        - /etc/ssl/cert.pem:/etc/ssl/cert.pem
-        - /etc/ssl/key.pem:/etc/ssl/key.pem
+        - ../app/front/public:/var/www/front
+        - ./certbot/conf:/etc/letsencrypt
+        - ./certbot/www:/var/www/certbot
       ports:
+        - "443:3001"
         - "80:3000"
       command: "node /var/www/front/__sapper__/build"
       links:
         - web
   db:
         image: mysql:5.7.23
+        restart: unless-stopped
         env_file:
           - ../app/back/.env.local
         environment:
