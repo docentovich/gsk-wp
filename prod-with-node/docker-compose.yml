@@ -48,6 +48,8 @@ services:
         - /etc/ssl/certificate.crt:/etc/ssl/certificate.crt
         - /etc/ssl/private.key:/etc/ssl/private.key
         - /etc/ssl/ca_bundle.crt:/etc/ssl/ca_bundle.crt
+        - /etc/ssl/cert.pem:/etc/ssl/cert.pem
+        - /etc/ssl/key.pem:/etc/ssl/key.pem
       ports:
         - "80:3000"
       command: "node /var/www/front/__sapper__/build"
