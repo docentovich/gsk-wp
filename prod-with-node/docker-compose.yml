@@ -45,6 +45,9 @@ services:
         - ../app/front/public/static:/var/www/front/static
         - ../app/front/public/node_modules:/var/www/node_modules
         - ../app/front/public/package.json:/var/www/package.json
+        - /etc/ssl/certificate.crt:/etc/ssl/certificate.crt
+        - /etc/ssl/private.key:/etc/ssl/private.key
+        - /etc/ssl/ca_bundle.crt:/etc/ssl/ca_bundle.crt
       ports:
         - "80:3000"
       command: "node /var/www/front/__sapper__/build"
