@@ -9,12 +9,14 @@ services:
       PHP_XDEBUG_ENABLED: 0 # Set 1 to enable.
     links:
       - db
+    restart: unless-stopped
     volumes:
       - ../app/back:/var/www/back
       - ../app/front:/var/www/front
       - ./php.ini:/usr/local/etc/php/conf.d/common.ini
   web:
     image: nginx:1.11-alpine
+    restart: unless-stopped
     links:
       - php
     ports:
@@ -26,6 +28,7 @@ services:
       - php
   db:
     image: mysql:5.7.23
+    restart: unless-stopped
     env_file:
       - ../app/back/.env.local
     environment:

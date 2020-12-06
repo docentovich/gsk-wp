@@ -5,6 +5,7 @@ services:
       build:
         context: ../docker_files
         dockerfile: php
+      restart: unless-stopped
       ports:
         - "9000:9000"
       environment:
@@ -29,6 +30,7 @@ services:
        - ../sessions
   web:
         image: nginx:1.11-alpine
+        restart: unless-stopped
         links:
           - php
         ports:
@@ -40,6 +42,7 @@ services:
           - php
   db:
         image: mysql:5.7.23
+        restart: unless-stopped
         env_file:
           - ../app/back/.env.local
         environment:
