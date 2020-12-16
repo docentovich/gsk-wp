@@ -32,7 +32,7 @@ services:
       - ./certbot-etc:/etc/letsencrypt
       - ../app/front/public:/var/www/front
     entrypoint:  "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
-    command: certonly --noninteractive --keep-until-expiring --webroot --webroot-path=/var/www/front/static/letsencrypt --email andrei.prozorov@mail.ru --agree-tos --no-eff-email -d www.gsk-stroy.ru #--dry-run
+    command: certonly --noninteractive --keep-until-expiring --webroot --webroot-path=/var/www/front/static/letsencrypt --email andrei.prozorov@mail.ru --agree-tos --no-eff-email -d www.gsk-stroy.ru -d gsk-stroy.ru #--dry-run
   web:
       image: nginx:1.11-alpine
       restart: unless-stopped
