@@ -2,72 +2,74 @@ version: '2.1'
 
 services:
   php:
-      build:
-        context: ../docker_files
-        dockerfile: php
-      restart: unless-stopped
-      environment:
-        PHP_XDEBUG_ENABLED: 0 # Set 1 to enable.
-      links:
-        - db
-      volumes:
-        - ../app/back:/var/www/back
-        - ../app/front:/var/www/front
-        - ./php.ini:/usr/local/etc/php/conf.d/common.ini
+    build:
+      context: ../docker_files
+      dockerfile: php
+    restart: unless-stopped
+    environment:
+      PHP_XDEBUG_ENABLED: 0 # Set 1 to enable.
+    links:
+      - db
+    volumes:
+      - ../app/back:/var/www/back
+      - ../app/front:/var/www/front
+      - ./php.ini:/usr/local/etc/php/conf.d/common.ini
+      - ./certbot-etc:/etc/letsencrypt
+      - ./logs:/var/log/letsencrypt
   phpmyadmin:
-      image: phpmyadmin/phpmyadmin
-      container_name: phpmyadmin
-      environment:
-       - PMA_ARBITRARY=1
-       - UPLOAD_LIMIT=99999999999999
-      restart: always
-      ports:
-       - "8090:80"
-      volumes:
-       - ../sessions
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    environment:
+      - PMA_ARBITRARY=1
+      - UPLOAD_LIMIT=99999999999999
+    restart: unless-stopped
+    ports:
+      - "8090:80"
+    volumes:
+      - ../sessions
   certbot:
     image: certbot/certbot
+    depends_on:
+      - "node"
     restart: unless-stopped
-    volumes:
-      - ./certbot-etc:/etc/letsencrypt
-      - ../app/front/public:/var/www/front
-    entrypoint:  "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
-    command: certonly --noninteractive --keep-until-expiring --webroot --webroot-path=/var/www/front/static/letsencrypt --email andrei.prozorov@mail.ru --agree-tos --no-eff-email -d www.gsk-stroy.ru -d gsk-stroy.ru #--dry-run
+    volumes_from:
+      - php
+    entrypoint:  "/bin/sh -c 'trap exit TERM; while :; do certbot renew ; sleep 12h & wait $${!}; done;'"
+    command: certonly --noninteractive --keep-until-expiring --webroot --webroot-path=/var/www/front/public/static/letsencrypt --email docentovich@gmail.com --agree-tos --no-eff-email -d gsk-stroy.ru -d www.gsk-stroy.ru #--dry-run
   web:
-      image: nginx:1.11-alpine
-      restart: unless-stopped
-      links:
-        - php
-      ports:
-        - "8080:8080"
-      volumes:
-        - ./nginx.conf:/etc/nginx/conf.d/default.conf
-      command: '/bin/sh -c ''while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g "daemon off;"'''
-      volumes_from:
-        - php
-        - certbot
+    image: nginx:1.11-alpine
+    restart: unless-stopped
+    links:
+      - php
+    ports:
+      - "8080:8080"
+    command: '/bin/sh -c ''while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g "daemon off;"'''
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    volumes_from:
+      - php
   node:
-      image: "node:latest"
-      user: "www-data"
-      working_dir: /var/www/front
-      restart: unless-stopped
-      environment:
-        - NODE_ENV=production
-      volumes_from:
-        - certbot
-      ports:
-        - "443:3001"
-        - "80:3000"
-      command: "node /var/www/front/__sapper__/build"
-      links:
-        - web
+    image: "node:latest"
+    user: "www-data"
+    working_dir: /var/www/front/public
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    volumes_from:
+      - php
+    ports:
+      - "443:3001"
+      - "80:3000"
+    command: "node /var/www/front/public/__sapper__/build"
+    links:
+      - web
   db:
-        image: mysql:5.7.23
-        restart: unless-stopped
-        env_file:
-          - ../app/back/.env.local
-        environment:
-         - TZ=Europe/Moscow
-        command: --innodb_use_native_aio=0
-        volumes:
-          - ../db:/var/lib/mysql
+    image: mysql:5.7.23
+    restart: unless-stopped
+    env_file:
+      - ../app/back/.env.local
+    environment:
+      - TZ=Europe/Moscow
+    command: --innodb_use_native_aio=0
+    volumes:
+      - ../db:/var/lib/mysql
