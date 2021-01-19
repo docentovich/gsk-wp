@@ -51,7 +51,7 @@ services:
         links:
           - web
   db:
-        image: mysql:5.7.23
+        image: mariadb
         env_file:
           - ../app/back/.env.local
         environment:

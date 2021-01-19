@@ -64,7 +64,7 @@ services:
     links:
       - web
   db:
-    image: mysql:5.7.23
+    image: mariadb
     restart: unless-stopped
     env_file:
       - ../app/back/.env.local
