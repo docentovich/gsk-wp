@@ -15,7 +15,15 @@ services:
       - ../app/front:/var/www/front
       - ./php.ini:/usr/local/etc/php/conf.d/common.ini
       - ./certbot-etc:/etc/letsencrypt
-      - ./logs:/var/log/letsencrypt
+      - ../logs/letsencrypt:/var/log/letsencrypt
+      - ../logs/php/php-error.log:/var/log/error.log
+      - ../logs/php/php-access.log:/var/log/access.log
+      - ../log/nginx:/var/log/nginx
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "3m"
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     container_name: phpmyadmin
@@ -27,6 +35,11 @@ services:
       - "8090:80"
     volumes:
       - ../sessions
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "3m"
   certbot:
     image: certbot/certbot
     depends_on:
@@ -36,6 +49,11 @@ services:
       - php
     entrypoint:  "/bin/sh -c 'trap exit TERM; while :; do certbot renew ; sleep 12h & wait $${!}; done;'"
     command: certonly --noninteractive --keep-until-expiring --webroot --webroot-path=/var/www/front/public/static/letsencrypt --email docentovich@gmail.com --agree-tos --no-eff-email -d gsk-stroy.ru -d www.gsk-stroy.ru #--dry-run
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "3m"
   web:
     image: nginx:1.11-alpine
     restart: unless-stopped
@@ -48,6 +66,11 @@ services:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
     volumes_from:
       - php
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "3m"
   node:
     image: "node:latest"
     user: "www-data"
@@ -63,6 +86,11 @@ services:
     command: "node /var/www/front/public/__sapper__/build"
     links:
       - web
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "3m"
   db:
     image: mariadb
     restart: unless-stopped
@@ -73,3 +101,8 @@ services:
     command: --innodb_use_native_aio=0
     volumes:
       - ../db:/var/lib/mysql
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "3m"
